@@ -12,6 +12,7 @@ from slackclient import SlackClient
 config = configparser.ConfigParser()
 config.read('config.ini')
 SLACK_BOT_TOKEN = config['Slack_Token']['SLACK_BOT_TOKEN']
+WEBHOOK_URL = config['Slack_Token']['WEBHOOK_URL']
 slack_client = SlackClient(SLACK_BOT_TOKEN)
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 moonrat_id = None
@@ -77,19 +78,30 @@ def handle_command(command, channel):
     elif command == '!top':
         text = top_coins()
     #sends the response back to the channel
+
+    req = requests.post(url = WEBHOOK_URL, json = text, headers = {'Content-Type': 'application/json'})
+    
+    '''
+        original way to write to the channels.
     slack_client.api_call(
         "chat.postMessage",
         channel=channel,
         text=text,
-    )
+    )'''
 
 def top_coins():
     output = ""
     req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/?limit=10')
     top10_coins = req.json()
+    counter = 1
     for coins in top10_coins:
-        output += "*{:16}* ${:.2f}\n".format(coins['name'],float(coins['price_usd']))
-    return output
+        output += "{}.*{:16}* ${:.2f}\n".format(counter,coins['name'],float(coins['price_usd']))
+        counter += 1
+    text  = {"text": "The top 10 cryptocurrencies are as follows:",
+        "attachments":[
+            {"text": output}
+        ]}
+    return text
 
 def format_coin_output(coin):
     coin_output1 = "Grabbing latest data for *" + coin['name'] + "*\n"
@@ -99,9 +111,11 @@ def format_coin_output(coin):
     coin_output5 = "{:20s}\t{:.2f}%\n".format("*Change 1hr*",float(coin['percent_change_1h']))
     coin_output6 = "{:20s}\t{:.2f}%\n".format("*Change 24hr*",float(coin['percent_change_24h']))
     coin_output7 = "{:20s}\t{:.2f}%\n".format("*Change 7d*",float(coin['percent_change_7d']))
-
-
-    return (coin_output1+coin_output2+coin_output3+coin_output4+coin_output5+coin_output6+coin_output7)
+    text = {"text": coin_output1, 
+        "attachments": [
+            {"text": coin_output2+coin_output3+coin_output4+coin_output5+coin_output6+coin_output7}
+        ]}
+    return text
 
 
 def make_crypto_db():
