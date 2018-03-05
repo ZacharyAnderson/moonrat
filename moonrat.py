@@ -71,51 +71,58 @@ def handle_command(command, channel):
         req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/' + name_id_map[command.lower()] + '/')
         coin = req.json()
         text =format_coin_output(coin[0])
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=text,
+        )
     elif command.lower() in symbol_id_map:
         req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/' + symbol_id_map[command.lower()] + '/')
         coin = req.json()
         text = format_coin_output(coin[0])
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=text,
+        )
     elif command == '!top':
         text = top_coins()
-    #sends the response back to the channel
-
-    req = requests.post(url = WEBHOOK_URL, json = text, headers = {'Content-Type': 'application/json'})
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=text,
+        )
     
-    '''
-        original way to write to the channels.
+    #sends the response back to the channel
+    """
     slack_client.api_call(
-        "chat.postMessage",
-        channel=channel,
-        text=text,
-    )'''
+            "chat.postMessage",
+            channel=channel,
+            text=text,
+        )"""
 
 def top_coins():
     output = ""
     req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/?limit=10')
     top10_coins = req.json()
     counter = 1
+    output = "The top 10 cryptocurrencies are as follows:\n"
+    output += "```{:25}{:<10}{:>20} %\n".format("Currency Name","Price in $","24h Change Rate")
     for coins in top10_coins:
-        output += "{}.*{:16}* ${:.2f}\n".format(counter,coins['name'],float(coins['price_usd']))
+        str_count = 32 - len(coins['name'])
+        output += "{:2}. {:20}{:>10.2f}{:>20}%\n".format(counter,coins['name'],float(coins['price_usd']),coins['percent_change_24h'])
         counter += 1
-    text  = {"text": "The top 10 cryptocurrencies are as follows:",
-        "attachments":[
-            {"text": output}
-        ]}
-    return text
+    return (output + "```")
 
 def format_coin_output(coin):
     coin_output1 = "Grabbing latest data for *" + coin['name'] + "*\n"
-    coin_output2 = "{:20s}\t${:.2f}\n".format("*Price USD*",float(coin['price_usd']))
-    coin_output3 = "{:20s}\t{:.8f}\n".format("*Price BTC*",float(coin['price_btc']))
-    coin_output4 = "{:20s}\t${:.2f}\n".format("*Market Cap*",float(coin['market_cap_usd']))
-    coin_output5 = "{:20s}\t{:.2f}%\n".format("*Change 1hr*",float(coin['percent_change_1h']))
-    coin_output6 = "{:20s}\t{:.2f}%\n".format("*Change 24hr*",float(coin['percent_change_24h']))
-    coin_output7 = "{:20s}\t{:.2f}%\n".format("*Change 7d*",float(coin['percent_change_7d']))
-    text = {"text": coin_output1, 
-        "attachments": [
-            {"text": coin_output2+coin_output3+coin_output4+coin_output5+coin_output6+coin_output7}
-        ]}
-    return text
+    coin_output2 = "```{:20s}\t${:.2f}\n".format("Price USD",float(coin['price_usd']))
+    coin_output3 = "{:20s}\t{:.8f}\n".format("Price BTC",float(coin['price_btc']))
+    coin_output4 = "{:20s}\t${:.2f}\n".format("Market Cap",float(coin['market_cap_usd']))
+    coin_output5 = "{:20s}\t{:.2f}%\n".format("Change 1hr",float(coin['percent_change_1h']))
+    coin_output6 = "{:20s}\t{:.2f}%\n".format("Change 24hr",float(coin['percent_change_24h']))
+    coin_output7 = "{:20s}\t{:.2f}%\n```".format("Change 7d",float(coin['percent_change_7d']))
+    return (coin_output1+coin_output2+coin_output3+coin_output4+coin_output5+coin_output6+coin_output7)
 
 
 def make_crypto_db():
