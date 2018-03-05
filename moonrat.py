@@ -45,6 +45,8 @@ def parse_direct_mention(message_text):
     string = message_text.split()
     if '!price' == string[0]:
         return (None, string[1])
+    elif '!top' == string[0]:
+        return (None, string[0])
     else:
         matches = re.search(MENTION_REGEX,message_text)
         #the first group contains the username, the second group contains the maining message
@@ -72,6 +74,8 @@ def handle_command(command, channel):
         req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/' + symbol_id_map[command.lower()] + '/')
         coin = req.json()
         text = format_coin_output(coin[0])
+    elif command == '!top':
+        text = top_coins()
     #sends the response back to the channel
     slack_client.api_call(
         "chat.postMessage",
@@ -79,13 +83,25 @@ def handle_command(command, channel):
         text=text,
     )
 
+def top_coins():
+    output = ""
+    req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/?limit=10')
+    top10_coins = req.json()
+    for coins in top10_coins:
+        output += "*{:16}* ${:.2f}\n".format(coins['name'],float(coins['price_usd']))
+    return output
+
 def format_coin_output(coin):
     coin_output1 = "Grabbing latest data for *" + coin['name'] + "*\n"
-    coin_output2 = "{:<24}{:<24}{:<24}\n".format("*Price USD*", "*Price BTC*", "*Market Cap*")
-    coin_output3 = "{:<21.2f}{:<20.8f}{:<20.2f}\n".format(float(coin['price_usd']), float(coin['price_btc']), float(coin['market_cap_usd']))
-    coin_output4 = "{:<24}{:<22}{:<24}\n".format("*Change 1hr*", "*Change 24hr*", "*Change 7d*")
-    coin_output5 = "{:<28.2f}{:<28.2f}{:<28.2f}\n".format(float(coin['percent_change_1h']), float(coin['percent_change_24h']), float(coin['percent_change_7d']))
-    return (coin_output1+coin_output2+coin_output3+coin_output4+coin_output5)
+    coin_output2 = "{:20s}\t${:.2f}\n".format("*Price USD*",float(coin['price_usd']))
+    coin_output3 = "{:20s}\t{:.8f}\n".format("*Price BTC*",float(coin['price_btc']))
+    coin_output4 = "{:20s}\t${:.2f}\n".format("*Market Cap*",float(coin['market_cap_usd']))
+    coin_output5 = "{:20s}\t{:.2f}%\n".format("*Change 1hr*",float(coin['percent_change_1h']))
+    coin_output6 = "{:20s}\t{:.2f}%\n".format("*Change 24hr*",float(coin['percent_change_24h']))
+    coin_output7 = "{:20s}\t{:.2f}%\n".format("*Change 7d*",float(coin['percent_change_7d']))
+
+
+    return (coin_output1+coin_output2+coin_output3+coin_output4+coin_output5+coin_output6+coin_output7)
 
 
 def make_crypto_db():
