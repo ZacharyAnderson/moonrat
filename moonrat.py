@@ -48,6 +48,8 @@ def parse_direct_mention(message_text):
         return (None, string[1])
     elif '!top' == string[0]:
         return (None, string[0])
+    elif '!exit' == string[0]:
+        return (None, string[0])
     else:
         matches = re.search(MENTION_REGEX,message_text)
         #the first group contains the username, the second group contains the maining message
@@ -92,14 +94,13 @@ def handle_command(command, channel):
             channel=channel,
             text=text,
         )
-    
-    #sends the response back to the channel
-    """
-    slack_client.api_call(
+     elif command == '!exit':
+        text = ":wasssap3::wasssap3:ABANDON SHIP!!!:wasssap3::wasssap3:\n :rotating_light:EXIT ALL MARKETS:rotating_light:\n"
+        slack_client.api_call(
             "chat.postMessage",
             channel=channel,
             text=text,
-        )"""
+        )
 
 def top_coins():
     output = ""
