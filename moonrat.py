@@ -94,7 +94,7 @@ def handle_command(command, channel):
             channel=channel,
             text=text,
         )
-     elif command == '!exit':
+    elif command == '!exit':
         text = ":wasssap3::wasssap3:ABANDON SHIP!!!:wasssap3::wasssap3:\n :rotating_light:EXIT ALL MARKETS:rotating_light:\n"
         slack_client.api_call(
             "chat.postMessage",
