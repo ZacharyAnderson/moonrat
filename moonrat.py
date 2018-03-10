@@ -14,13 +14,12 @@ config.read('config.ini')
 SLACK_BOT_TOKEN = config['Slack_Token']['SLACK_BOT_TOKEN']
 WEBHOOK_URL = config['Slack_Token']['WEBHOOK_URL']
 slack_client = SlackClient(SLACK_BOT_TOKEN)
-# starterbot's user ID in Slack: value is assigned after the bot starts up
 moonrat_id = None
 
 #constants
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
-EXAMPLE_COMMAND = "do"
-MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+
+#Global Variables
 name_id_map = {}
 symbol_id_map = {}
 
@@ -33,41 +32,36 @@ def parse_bot_commands(slack_events):
     """
     for event in slack_events:
         if event["type"] == "message" and not "subtype" in event:
-            user_id, message = parse_direct_mention(event["text"])
+            user_id, message = parse_crypto_calls(event["text"])
             if user_id == moonrat_id or message != None:
                 return message, event["channel"]
     return None, None
 
-def parse_direct_mention(message_text):
+def parse_crypto_calls(message_text):
     """
-        Finds a direct mention (a mention that is at the beginning) in message text
-        and returns the user ID which was mentioned. If there is no direct mention, returns None
+        Finds strings that start with specific call's and will output 
     """
     string = message_text.split()
     if '!price' == string[0]:
-        return (None, string[1])
+        try:
+            return (None, string[1])
+        except IndexError:
+            return (None, None)
     elif '!top' == string[0]:
         return (None, string[0])
     elif '!exit' == string[0]:
         return (None, string[0])
-    else:
-        matches = re.search(MENTION_REGEX,message_text)
-        #the first group contains the username, the second group contains the maining message
-        return (matches.group(1), matches.group(2).strip()) if matches else (None, None) 
 
 
 def handle_command(command, channel):
     """
-        Executes bot command if the command is known
+        Executes bot command if the command is known.
+        Commands for !price __coin__, !top, !exit, and default message.
     """
     #Default respons is help text for the user
     default_response = "This don't exist m8. Try *{}*.".format("!price trx")
     #Finds and executes the given command, filling in response
     response = None
-    pretext = None
-    #This is where you start to implement more commands
-    #if command.startswith(EXAMPLE_COMMAND):
-     #   response = "Sure M8, buzz off and do some more work."
     
     if command.lower() in name_id_map:
         req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/' + name_id_map[command.lower()] + '/')
@@ -101,8 +95,18 @@ def handle_command(command, channel):
             channel=channel,
             text=text,
         )
+    else:
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=default_response,
+        )
 
 def top_coins():
+    """
+        Top coins function formulates the top 10 coins
+        and forms a string to be called through the slack api.
+    """
     output = ""
     req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/?limit=10')
     top10_coins = req.json()
@@ -116,6 +120,10 @@ def top_coins():
     return (output + "```")
 
 def format_coin_output(coin):
+    """
+        format_coint_output gets the coin information for the specified coin
+        and forms a string that will be called into the slack api.
+    """
     coin_output1 = "Grabbing latest data for *" + coin['name'] + "*\n"
     coin_output2 = "```{:20s}\t${:.2f}\n".format("Price USD",float(coin['price_usd']))
     coin_output3 = "{:20s}\t{:.8f}\n".format("Price BTC",float(coin['price_btc']))
