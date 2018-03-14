@@ -50,6 +50,8 @@ def parse_direct_mention(message_text):
         return (None, string[0])
     elif '!exit' == string[0]:
         return (None, string[0])
+    elif '!ping' == string[0]:
+        return (None, string[0])
     else:
         matches = re.search(MENTION_REGEX,message_text)
         #the first group contains the username, the second group contains the maining message
@@ -101,6 +103,13 @@ def handle_command(command, channel):
             channel=channel,
             text=text,
         )
+    elif command == '!ping':
+        text = "Still scavaging the moon.\n"
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            text=text,
+        )
 
 def top_coins():
     output = ""
@@ -130,12 +139,25 @@ def make_crypto_db():
     """
         Creates the database mapping's needed and updates the database every few hours.
     """
-    threading.Timer(3600.0, make_crypto_db).start()
+    threading.Timer(3600, make_crypto_db).start()
     req = requests.get(url = 'https://api.coinmarketcap.com/v1/ticker/?limit=0')
     all_coins = req.json()
     for coins in all_coins:
         name_id_map[coins['name'].lower()] = coins['id']
         symbol_id_map[coins['symbol'].lower()] = coins['id']
+
+def ping_moonrat():
+    """
+        This function will be used to ping the moonrat app, so that
+        it will not go inactive and get kicked from the session.
+    """
+    threading.Timer(3600, ping_moonrat).start()
+    text = "Moonrat is still active\n"
+    slack_client.api_call(
+        "chat.postMessage",
+        channel='G9P7X8Q0H',
+        text=text,
+        )
 
 
 if __name__ == "__main__":
@@ -144,6 +166,7 @@ if __name__ == "__main__":
         #Read bot's user ID by calling Web API method 'auth.test'
         moonrat_id = slack_client.api_call("auth.test")["user_id"]
         make_crypto_db()
+        ping_moonrat()
         while True:
             command, channel = parse_bot_commands(slack_client.rtm_read())
             if command:
