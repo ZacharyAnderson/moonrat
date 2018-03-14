@@ -54,9 +54,8 @@ def parse_crypto_calls(message_text):
     elif '!ping' == string[0]:
         return (None, string[0])
     else:
-        matches = re.search(MENTION_REGEX,message_text)
         #the first group contains the username, the second group contains the maining message
-        return (matches.group(1), matches.group(2).strip()) if matches else (None, None) 
+        return (None, None) 
 
 
 def handle_command(command, channel):
